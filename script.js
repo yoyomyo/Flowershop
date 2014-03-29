@@ -19,6 +19,12 @@ var jsonData = [
 {"flower": "dandelion", "date": "2/7/2012", "quantity-sold": "7", "quantity-unsold": "8"}
 ]
 
+
+//checkbox values
+var sold = true
+var unsold = true
+
+
 //convert json data to a group of objects
 var data = []
 var flowers = {};           //key data by flower names
@@ -31,18 +37,31 @@ for(var d in jsonData){
     row.unsold = +jsonData[d]["quantity-unsold"]
     data.push(row)
 
-    if(row.flower in flowers){
-        flowers[row.flower].push({date:row.date, sold:row.sold, unsold:row.unsold});
-    }else{
-        flowers[row.flower] = [{date:row.date, sold:row.sold, unsold:row.unsold}];
+    if(!(row.flower in flowers)){ flowers[row.flower] = []}
+
+    if(sold && unsold){
+        flowers[row.flower].push({date:row.date, begin: 0, end:row.sold});
+        flowers[row.flower].push({date:row.date, begin: row.sold, end:row.sold + row.unsold});
+    }else if(sold){
+        flowers[row.flower].push({date:row.date, sold:row.sold});
+    }else if(unsold){
+        flowers[row.flower].push({date:row.date, unsold:row.unsold});
     }
 
-    if(row.date in dates){
-        dates[row.date].push({flower:row.flower, sold:row.sold, unsold:row.unsold});
-    }else{
-        dates[row.date] = [{flower:row.flower, sold:row.sold, unsold:row.unsold}];
+
+    if(!(row.date in dates)){ dates[row.date] = [] }
+
+    if(sold && unsold){
+        dates[row.date].push({flower:row.flower, bottom:0, top:row.sold});
+        dates[row.date].push({flower:row.flower, bottom:row.sold, top:row.sold+row.unsold});
+    }else if(sold){
+        dates[row.date].push({flower:row.flower, sold:row.sold});
+    }else if(unsold){
+        dates[row.date] = [{flower:row.flower, unsold:row.unsold}];
     }
 }
+
+
 
 var datesArray = []
 for (var key in dates) {
@@ -54,8 +73,7 @@ for (var key in flowers) {
     flowersArray.push({flower:key, value:flowers[key]});
 }
 
-var sold = true
-var unsold = true
+
 
 // var format = d3.time.format("%m/%d/%Y")
 // var amountFn = function(d) { return d.sold }
@@ -136,15 +154,27 @@ var chart = d3.select(".chart")
       .attr("transform", function(d) { 
         return "translate(" + x(d.date) + ",0)"; 
     });
+ 
 
-  var bar = state.selectAll("rect")
-      .data(function(d) { return d.value })
-     .enter().append("rect")
-      .attr("width", xx.rangeBand())
-      .attr("x", function(d) { return xx(d.flower); })
-      .attr("y", function(d) { return y(d.sold); })
-      .attr("height", function(d) { return height - y(d.sold); })
-      .style("fill", function(d,i) { return soldColor(d.flower); })
+  if(sold && unsold){
+      var bar = state.selectAll("rect")
+          .data(function(d) { return d.value })
+          .enter().append("rect")
+          .attr("width", xx.rangeBand())
+          .attr("x", function(d) { return xx(d.flower); })
+          .attr("y", function(d) { return y(d.top); })
+          .attr("height", function(d) { return y(d.bottom) - y(d.top); })
+          .style("fill", function(d,i) { 
+                if(d.bottom ==0){
+                    console.log("sold " + d.flower + ":"+soldColor(d.flower))
+                    return soldColor(d.flower); 
+                }else{
+                    console.log("unsold " + d.flower + ":"+unsoldColor(d.flower))
+                    return unsoldColor(d.flower);  
+                }               
+        })    
+  }
+
 
   var legend = chart.selectAll(".legend")
       .data(Object.keys(flowers).slice().reverse())
