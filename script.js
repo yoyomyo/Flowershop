@@ -11,6 +11,7 @@ var jsonData = [
 {"flower": "rose", "date": "2/5/2012", "quantity-sold": "55", "quantity-unsold": "35"},
 {"flower": "rose", "date": "2/6/2012", "quantity-sold": "70", "quantity-unsold": "20"},
 {"flower": "rose", "date": "2/7/2012", "quantity-sold": "30", "quantity-unsold": "70"},
+{"flower": "rose", "date": "2/8/2012", "quantity-sold": "40", "quantity-unsold": "60"},
 {"flower": "dandelion", "date": "2/3/2012", "quantity-sold": "10", "quantity-unsold": "0"},
 {"flower": "dandelion", "date": "2/4/2012", "quantity-sold": "9", "quantity-unsold": "11"},
 {"flower": "dandelion", "date": "2/5/2012", "quantity-sold": "3", "quantity-unsold": "17"},
@@ -18,22 +19,47 @@ var jsonData = [
 {"flower": "dandelion", "date": "2/7/2012", "quantity-sold": "7", "quantity-unsold": "8"}
 ]
 
-//convert data to a group of objects
-//render data by datetime
-//render data by flowername
+//convert json data to a group of objects
 var data = []
+var flowers = {};           //key data by flower names
+var dates = {};             //key data by dates
 for(var d in jsonData){
     var row = {};
-    row.flower = jsonData[d]["flower"] 
+    row.flower = jsonData[d]["flower"]
     row.date = jsonData[d]["date"]
     row.sold = +jsonData[d]["quantity-sold"]
     row.unsold = +jsonData[d]["quantity-unsold"]
     data.push(row)
+
+    if(row.flower in flowers){
+        flowers[row.flower].push({date:row.date, sold:row.sold, unsold:row.unsold});
+    }else{
+        flowers[row.flower] = [{date:row.date, sold:row.sold, unsold:row.unsold}];
+    }
+
+    if(row.date in dates){
+        dates[row.date].push({flower:row.flower, sold:row.sold, unsold:row.unsold});
+    }else{
+        dates[row.date] = [{flower:row.flower, sold:row.sold, unsold:row.unsold}];
+    }
 }
 
-var format = d3.time.format("%m/%d/%Y")
-var amountFn = function(d) { return d.sold }
-var dateFn = function(d) { return format.parse(d.date) }
+var datesArray = []
+for (var key in dates) {
+    datesArray.push({date:key, value:dates[key]});
+}
+
+var flowersArray = []
+for (var key in flowers) {
+    flowersArray.push({flower:key, value:flowers[key]});
+}
+
+var sold = true
+var unsold = true
+
+// var format = d3.time.format("%m/%d/%Y")
+// var amountFn = function(d) { return d.sold }
+// var dateFn = function(d) { return format.parse(d.date) }
 
 var width = 960,
     height = 500;
@@ -45,44 +71,96 @@ var chart = d3.select(".chart")
     .attr("height", height)
     .attr("width", width);
 
-var y = d3.scale.linear()
-    .domain([0, d3.max(data, function(d) { return d.sold; })])
-    .range([height, 0]);
-  
-var x = d3.time.scale()
-    .domain(d3.extent(data, dateFn))
-    .range([0, width])
 
+var margin = {top: 20, right: 30, bottom: 30, left: 40},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+//param: array of dates, array of flowers, boolean sold, boolean unsold
+
+// // var x = d3.scale.ordinal()
+// //     .rangeRoundBands([0, width], .1);
 // var y = d3.scale.linear()
-//     .range([height, 0])
-//     .domain(d3.extent(data, amountFn))
+//     .domain([0, d3.max(data, function(d) { return d.sold; })])
+//     .range([height, 0]);
 
-//chart is composed of multiple bars
-var bar = chart.selectAll("g")
-    .data(data)         //The data join, used to create, update or destroy elements whenever data changes.
-    .enter()            //data join returns nothing, enter selection returns the new set of data
-    .append("g")        //instantiate the missing element g by appending to the enter selection
-    .attr("transform", function(d, i) { return "translate("+ i * barWidth + ",0)"; });
+var x = d3.scale.ordinal()
+    .domain(data.map(function(d) { return d.date; }))
+    .rangeBands([10, width]);
 
-//each bar is made of a rect and text
-bar.append("rect")
-    .attr("y", function(d){return y(d.sold)})
-    .attr("height", function(d) { return height - y(d.sold); })
-    .attr("width", barWidth - 1);
+var xx = d3.scale.ordinal()
+        .domain(data.map(function(d) { return d.flower; }))
+        .rangeRoundBands([10, x.rangeBand()]);
 
-bar.append("text")
-    .attr("y", function(d) { return y(d.sold) + 3; })
-    .attr("x", barWidth / 2)
-    .attr("dy", ".75em")
-    .text(function(d) { return d.sold; });
+  // x0.domain(data.map(function(d) { return d.State; }));
+  //x1.domain(ageNames).rangeRoundBands([0, x0.rangeBand()]);
+var soldColor = d3.scale.ordinal()
+    .domain(data.map(function(d) { return d.flower; }))
+    .range(["#98abc5", "#8a89a6", "#7b6888"]);
 
+var unsoldColor = d3.scale.ordinal()
+    .domain(data.map(function(d) { return d.flower; }))
+    .range(["#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
 
+var y = d3.scale.linear()
+    .domain([0, d3.max(data, function(d) { return d.sold+d.unsold; })])
+    .range([height, 0]);
 
 var xAxis = d3.svg.axis()
     .scale(x)
     .orient("bottom");
 
-chart.append("g")
-    .attr("class", "x axis")
-    .attr("transform", "translate(0, 500)")
-    .call(xAxis);
+var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left");
+
+var chart = d3.select(".chart")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  chart.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
+
+  chart.append("g")
+      .attr("class", "y axis")
+      .call(yAxis);
+
+  var state = chart.selectAll(".dates")
+      .data(datesArray)
+      .enter().append("g")
+      .attr("class", "g")
+      .attr("transform", function(d) { 
+        return "translate(" + x(d.date) + ",0)"; 
+    });
+
+  var bar = state.selectAll("rect")
+      .data(function(d) { return d.value })
+     .enter().append("rect")
+      .attr("width", xx.rangeBand())
+      .attr("x", function(d) { return xx(d.flower); })
+      .attr("y", function(d) { return y(d.sold); })
+      .attr("height", function(d) { return height - y(d.sold); })
+      .style("fill", function(d,i) { return soldColor(d.flower); })
+
+  var legend = chart.selectAll(".legend")
+      .data(Object.keys(flowers).slice().reverse())
+    .enter().append("g")
+      .attr("class", "legend")
+      .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+  legend.append("rect")
+      .attr("x", width - 18)
+      .attr("width", 18)
+      .attr("height", 18)
+      .style("fill", soldColor);
+
+  legend.append("text")
+      .attr("x", width - 24)
+      .attr("y", 9)
+      .attr("dy", ".35em")
+      .style("text-anchor", "end")
+      .text(function(d) { return d; });
