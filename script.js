@@ -1,4 +1,6 @@
 
+// (function(){
+
 
     var jsonData = [
     {"flower": "tulip", "date": "2/3/2012", "quantity-sold": "20", "quantity-unsold": "10"},
@@ -102,12 +104,17 @@
     //user input
     // var chosenDates = {'2/3/2012':1, '2/4/2012':1, '2/5/2012':1};
     // var chosenFlowers = {'rose':1, 'dandelion':1};
-
+        var tip = d3.tip()
+            .attr('class', 'd3-tip')
+            .offset([-10, 0])
+            .html(function(e) {
+                console.log(e)
+                //return "<strong>Frequency:</strong> <span style='color:red'>" + d.frequency + "</span>";
+            })
     //domain of x axis, dates
     //domain of xx axis, flowers
     //domain of y axis, sold, unsold or sold+unsold
     //domain of color, flower, either sold or unsold
-    var bars;
     function drawGraph(){
 
         $('.chart').html("");
@@ -126,7 +133,7 @@
         Object.keys(allFlowers).slice().map(function(d){ legendData.push(d+'(unsold)')});
 
         var color = {};
-        var colorCandidates = ["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"];
+        var colorCandidates = ["#98abc5", "#dd4488", "#8a89a6", "#ffddee", "#7b6888", "#eebbdd", "#bb3377"];
         for(var i in legendData){
             color[legendData[i]] = colorCandidates[i];
         }
@@ -161,7 +168,7 @@
         var yAxis = d3.svg.axis()
             .scale(y)
             .orient("left");
-
+        
         var chart = d3.select(".chart")
             .attr("width", width + margin.left + margin.right)
             .attr("height", height + margin.top + margin.bottom)
@@ -177,7 +184,6 @@
             .attr("class", "y axis")
             .call(yAxis);
 
-
         var group = chart.selectAll(".dates")
             .data(displayDataArray)
             .enter().append("g")
@@ -186,9 +192,17 @@
             return "translate(" + x(d.date) + ",0)"; 
         });
 
-        bars = group.selectAll("rect")
+        var tooltip = d3.select("body")
+            .append("div")
+            .style("position", "absolute")
+            .style("z-index", "10")
+            .style("visibility", "hidden")
+            .text("a simple tooltip");
+
+        var bars = group.selectAll(".bar")
             .data(function(d) { return  convertToArray(d.value);})
             .enter().append("rect")
+            .attr("class", "bar")
             .attr("width", xx.rangeBand())
             .attr("x", function(d) { return xx(d['flower']); })
             .attr("y", function(d) { return y(d.top); })
@@ -199,7 +213,21 @@
                 }else{
                     return color[d.flower+'(unsold)'];  
                 }               
-            })    
+            }) 
+            .on("mouseover", function(){
+                var bar = d3.select(this).style({opacity:0.8});
+                return tooltip.style("visibility", "visible");
+            })
+            .on("mousemove", function(d){
+                tooltip.text((d.sold? ("sold "+d.flower+": "+d.sold) : ("unsold " +d.flower+ ": " +d.unsold)));
+                return tooltip.style("top", (event.pageY-10)+"px").style("left",(event.pageX+10)+"px");
+            })
+            .on("mouseout", function(){
+                var bar = d3.select(this).style({opacity:1.0});
+                return tooltip.style("visibility", "hidden");
+            });
+            // .on('mouseover', function(d) {tip.show()})
+            // .on('mouseout', function(d) {tip.hide()})   
 
         var legend = chart.selectAll(".legend")
             .data(legendData)
@@ -233,14 +261,14 @@
                 if(!(row.flower in result[row.date])){ result[row.date][row.flower] = []; }
                 
                 if(sold && unsold){            
-                    result[row.date][row.flower].push({bottom:0, top:row.sold, sold:true});
-                    result[row.date][row.flower].push({bottom:row.sold, top:row.sold+row.unsold, unsold:true});
+                    result[row.date][row.flower].push({bottom:0, top:row.sold, sold:row.sold});
+                    result[row.date][row.flower].push({bottom:row.sold, top:row.sold+row.unsold, unsold:row.unsold});
                     if(row.sold+row.unsold > maxHeight){ maxHeight = row.sold+row.unsold;}
                 }else if(sold){
-                    result[row.date][row.flower].push({bottom:0, top:row.sold, sold:true});
+                    result[row.date][row.flower].push({bottom:0, top:row.sold, sold:row.sold});
                     if(row.sold > maxHeight){ maxHeight = row.sold;}
                 }else if(unsold){
-                    result[row.date][row.flower].push({bottom:0, top:row.unsold, unsold:true});
+                    result[row.date][row.flower].push({bottom:0, top:row.unsold, unsold:row.unsold});
                     if(row.unsold > maxHeight){ maxHeight = row.unsold;}
                 }
             }
@@ -270,4 +298,4 @@
 
 
     drawGraph();
-
+// })();
