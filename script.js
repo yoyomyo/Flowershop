@@ -1,122 +1,73 @@
 
-// (function(){
-
-
-    var jsonData = [
-    {"flower": "tulip", "date": "2/3/2012", "quantity-sold": "20", "quantity-unsold": "10"},
-    {"flower": "tulip", "date": "2/4/2012", "quantity-sold": "18", "quantity-unsold": "12"},
-    {"flower": "tulip", "date": "2/5/2012", "quantity-sold": "23", "quantity-unsold": "7"},
-    {"flower": "tulip", "date": "2/6/2012", "quantity-sold": "15", "quantity-unsold": "20"},
-    {"flower": "tulip", "date": "2/7/2012", "quantity-sold": "12", "quantity-unsold": "23"},
-
-    {"flower": "rose", "date": "2/5/2012", "quantity-sold": "55", "quantity-unsold": "35"},
-    {"flower": "rose", "date": "2/6/2012", "quantity-sold": "70", "quantity-unsold": "20"},
-    {"flower": "rose", "date": "2/7/2012", "quantity-sold": "30", "quantity-unsold": "70"},
-    {"flower": "dandelion", "date": "2/3/2012", "quantity-sold": "10", "quantity-unsold": "0"},
-    {"flower": "dandelion", "date": "2/4/2012", "quantity-sold": "9", "quantity-unsold": "11"},
-    {"flower": "dandelion", "date": "2/5/2012", "quantity-sold": "3", "quantity-unsold": "17"},
-    {"flower": "dandelion", "date": "2/6/2012", "quantity-sold": "4", "quantity-unsold": "16"},
-    {"flower": "dandelion", "date": "2/7/2012", "quantity-sold": "7", "quantity-unsold": "8"},
-
-    {"flower": "rose", "date": "2/3/2012", "quantity-sold": "50", "quantity-unsold": "40"},
-    {"flower": "rose", "date": "2/4/2012", "quantity-sold": "43", "quantity-unsold": "47"}
-    ]
+(function(){
 
     //convert json data to a group of objects
     var data = []
-
     //for checkbox values
     var allDates = {}
     var allFlowers = {}
+    var dates = []
+    var flowers = []
 
-    for(var d in jsonData){
-        var row = {};
-        row.flower = jsonData[d]["flower"]
-        row.date = jsonData[d]["date"]
-        row.sold = +jsonData[d]["quantity-sold"]
-        row.unsold = +jsonData[d]["quantity-unsold"]
-        data.push(row)
-        if(!(row.flower in allFlowers)) { allFlowers[row.flower] = 1; }
-        if(!(row.date in allDates)) { allDates[row.date] = 1; }
-    }
-
-    var dates = Object.keys(allDates);
-    var flowers = Object.keys(allFlowers);
-    
-
-    function getList(data){
-        return '<li><label class="checkbox"><input type="checkbox" checked id = "' + data +'" value="'+ data +'">' + data + '</label></li>'
-    }
-    for(var i in dates){
-        var li = getList(dates[i]);
-        $('#dates').append(li);
-    }
-    for(var i in flowers){
-        var li = getList(flowers[i]);
-        $('#flowers').append(li);
-    }
-    $('#soldOrUnsold').append((function(){return getList('sold')})());
-    $('#soldOrUnsold').append((function(){return getList('unsold')})());
-
+    // initialize data filters
+    // var chosenDates = {'2/3/2012':1, '2/4/2012':1, '2/5/2012':1};
+    // var chosenFlowers = {'rose':1, 'dandelion':1};
     var chosenDates = allDates;
     var chosenFlowers = allFlowers;
     var sold = true;
-    var unsold = true;    
+    var unsold = true;  
 
-    $('#dates').change(function() {
-        //get all checked dates
-        var vals = {};
-        $('#dates').find('input:checked').each(function() {
-            vals[$(this).val()] = 1;
-        });
-        chosenDates = vals;
+    var colorCandidates = [ "#44bbcc", "#88dddd", "#E47297", "#FFAEAE",  "#FFD800", "#FFF0AA", "#9C79F4","#ADAAFE"];
 
-        drawGraph();
-    });
+    updateData();
+    drawGraph();
 
-    $('#flowers').change(function() {
-        //get all checked flowers
-        var vals = {};
-        $('#flowers').find('input:checked').each(function() {
-            vals[$(this).val()] = 1;
-        });
-        chosenFlowers = vals;
-
-        drawGraph();
-    });
-
-    $('#soldOrUnsold').change(function() {
-        //get sold or unsold
-        if($( "#sold:checked" ).length === 0){
-            sold = false;
-        }else{
-            sold = true;
-        }
-        if($( "#unsold:checked" ).length === 0){
-            unsold = false;
-        }else{
-            unsold = true;
+    function updateData(){
+        data = [];
+        for(var d in jsonData){
+            var row = {};
+            row.flower = jsonData[d]["flower"]
+            row.date = jsonData[d]["date"]
+            row.sold = +jsonData[d]["quantity-sold"]
+            row.unsold = +jsonData[d]["quantity-unsold"]
+            data.push(row)
+            if(!(row.flower in allFlowers)) { allFlowers[row.flower] = 1; }
+            if(!(row.date in allDates)) { allDates[row.date] = 1; }
         }
 
-        drawGraph();
-    });
+        dates = Object.keys(allDates);
+        dates.sort();
+        
+        //update chosenDates
+        temp = {};
+        for(var i in dates){
+            temp[dates[i]] = 1;
+        }
+        chosenDates = temp;
 
-    //user input
-    // var chosenDates = {'2/3/2012':1, '2/4/2012':1, '2/5/2012':1};
-    // var chosenFlowers = {'rose':1, 'dandelion':1};
-        var tip = d3.tip()
-            .attr('class', 'd3-tip')
-            .offset([-10, 0])
-            .html(function(e) {
-                console.log(e)
-                //return "<strong>Frequency:</strong> <span style='color:red'>" + d.frequency + "</span>";
-            })
-    //domain of x axis, dates
-    //domain of xx axis, flowers
-    //domain of y axis, sold, unsold or sold+unsold
-    //domain of color, flower, either sold or unsold
+        flowers = Object.keys(allFlowers);
+
+        $('#dates').html('');
+        for(var i in dates){
+            var li = getList(dates[i]);
+            $('#dates').append(li);
+        }
+        $('#flowers').html('');
+        for(var i in flowers){
+            var li = getList(flowers[i]);
+            $('#flowers').append(li);
+        }
+        $('#soldOrUnsold').html('').append((function(){return getList('sold')})());
+        $('#soldOrUnsold').append((function(){return getList('unsold')})());
+
+        function getList(d){
+            return '<li><label class="checkbox"><input type="checkbox" checked id = "' + d +'" value="'+ d +'">' + d + '</label></li>'
+        }
+    }
+
     function drawGraph(){
 
+        //a hack to clear the graph, thus no animation
         $('.chart').html("");
 
         var displayData = getDisplayData(chosenDates,chosenFlowers,sold,unsold);
@@ -128,12 +79,15 @@
             }       
         }
 
+        // each flower has two information: sold or unsold
         var legendData = []
-        Object.keys(allFlowers).slice().map(function(d){ legendData.push(d+'(sold)') });
-        Object.keys(allFlowers).slice().map(function(d){ legendData.push(d+'(unsold)')});
+        Object.keys(allFlowers).slice().map(function(d){ 
+            legendData.push(d+'(sold)');
+            legendData.push(d+'(unsold)');
+        });
 
+        // asign color to different flowers
         var color = {};
-        var colorCandidates = ["#98abc5", "#dd4488", "#8a89a6", "#ffddee", "#7b6888", "#eebbdd", "#bb3377"];
         for(var i in legendData){
             color[legendData[i]] = colorCandidates[i];
         }
@@ -147,15 +101,17 @@
             width = 960 - margin.left - margin.right,
             height = 500 - margin.top - margin.bottom;
 
-        //param: array of dates, array of flowers, boolean sold, boolean unsold
-
+        // compute axis
+        //domain of x axis, dates
+        //domain of xx axis, flowers
+        //domain of y axis, sold, unsold or sold+unsold
         var x = d3.scale.ordinal()
             .domain(Object.keys(chosenDates))
-            .rangeBands([10, width-100]);
+            .rangeBands([10, width-150]);
 
         var xx = d3.scale.ordinal()
                 .domain(Object.keys(chosenFlowers))
-                .rangeRoundBands([30, x.rangeBand()-30]);
+                .rangeRoundBands([10, x.rangeBand()]);
 
         var y = d3.scale.linear()
             .domain([0, displayData.height])
@@ -184,6 +140,17 @@
             .attr("class", "y axis")
             .call(yAxis);
 
+        //tooltip for displaying additional information
+        var tooltip = d3.select("body")
+            .append("button")
+            .attr("class", "btn btn-default")
+            .attr("data-toggle", "tooltip")
+            .attr("title", "Tooltip on left")
+            .style("position", "absolute")
+            .style("z-index", "10")
+            .style("visibility", "hidden");
+
+        // each group includes a number of flowers, group is organized by date
         var group = chart.selectAll(".dates")
             .data(displayDataArray)
             .enter().append("g")
@@ -191,13 +158,6 @@
             .attr("transform", function(d) { 
             return "translate(" + x(d.date) + ",0)"; 
         });
-
-        var tooltip = d3.select("body")
-            .append("div")
-            .style("position", "absolute")
-            .style("z-index", "10")
-            .style("visibility", "hidden")
-            .text("a simple tooltip");
 
         var bars = group.selectAll(".bar")
             .data(function(d) { return  convertToArray(d.value);})
@@ -226,9 +186,8 @@
                 var bar = d3.select(this).style({opacity:1.0});
                 return tooltip.style("visibility", "hidden");
             });
-            // .on('mouseover', function(d) {tip.show()})
-            // .on('mouseout', function(d) {tip.hide()})   
 
+        //add legend
         var legend = chart.selectAll(".legend")
             .data(legendData)
             .enter().append("g")
@@ -247,6 +206,24 @@
             .attr("dy", ".35em")
             .style("text-anchor", "end")
             .text(function(d) { return d; });
+
+        // convert a nested object to an array of key-value pairs
+        function convertToArray(O){
+            var result = []
+            for(var key1 in O){
+                for(var i in O[key1]){
+                    var kv = {};
+                    // the object passed in will have flower as key
+                    kv.flower = key1;   
+                    var obj = O[key1][i];
+                    for(var key2 in obj){
+                        kv[key2+''] = obj[key2];
+                    }
+                    result.push(kv);             
+                }
+            }
+            return result;
+        }
     }
 
     function getDisplayData(chosenDates, chosenFlowers, sold, unsold){
@@ -277,25 +254,48 @@
         return result;
     }
 
-    //convert a nested object to an array of key-value pairs
-    function convertToArray(O){
-        var result = []
-        for(var key1 in O){
-            for(var i in O[key1]){
-                var kv = {};
-                kv.flower = key1;   
-                var obj = O[key1][i];
-                for(var key2 in obj){
-                    //console.log(key2);
-                    kv[key2+''] = obj[key2]
-                }
-                result.push(kv);             
-            }
+    //update data filters when user changes checkbox selection
+    $('#dates').change(function() {
+        //get all checked dates
+        var vals = {};
+        $('#dates').find('input:checked').each(function() {
+            vals[$(this).val()] = 1;
+        });
+        chosenDates = vals;
+        drawGraph();
+    });
+
+    $('#flowers').change(function() {
+        //get all checked flowers
+        var vals = {};
+        $('#flowers').find('input:checked').each(function() {
+            vals[$(this).val()] = 1;
+        });
+        chosenFlowers = vals;
+
+        drawGraph();
+    });
+
+    $('#soldOrUnsold').change(function() {
+        //get sold or unsold
+        sold = !($( "#sold:checked" ).length === 0)
+        unsold = !($( "#unsold:checked" ).length === 0)
+        drawGraph();
+    });
+
+    $('#data').attr("rows", (function(){ return jsonData.length + 2})() );
+    $('#data').html(JSON.stringify(jsonData));
+    
+    $('#saveDataChange').click(function(){
+        try {
+            jsonData = JSON.parse($('#data').val());
+            $('#myModal').modal('hide'); 
+            updateData();
+            drawGraph();
+        }catch (e){
+            alert('The data entered cannot be parsed by JSON.');
         }
-        //console.log(result);
-        return result;
-    }
+    });
 
-
-    drawGraph();
-// })();
+    
+})();
